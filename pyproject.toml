@@ -1,7 +1,7 @@
 [project]
 name = "external-models-mcp"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server giving Gemini CLI access to external expert models (Groq, OpenRouter, HF)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -9,3 +9,10 @@ dependencies = [
     "mcp>=1.25.0",
     "python-dotenv>=1.2.1",
 ]
+
+[project.scripts]
+external-models-server = "external_models_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
