@@ -31,8 +31,8 @@ MODEL_ALIASES = {
 }
 
 # Safety Limits
-MAX_FILE_SIZE_BYTES = 512 * 1024  # 512KB per file
-MAX_TOTAL_CHARS = 400000         # ~100k tokens safety limit
+MAX_FILE_SIZE_BYTES = 512 * 1024 
+MAX_TOTAL_CHARS = 400000     
 
 def _resolve_model_name(alias: str) -> str:
     clean_alias = alias.lower().strip()
@@ -128,9 +128,13 @@ def compare_experts(prompt: str, context_files: List[str] = [], experts: List[st
     results = []
     for alias in experts:
         res = ask_expert(prompt, model=alias, context_files=context_files)
-        results.append(f"## 🧠 Expert: {alias.upper()}\n\n{res}\n")
+        results.append(f"## Expert: {alias.upper()}\n\n{res}\n")
             
     return "\n---".join(results)
 
-if __name__ == "__main__":
+def main():
+    """Entry point for the package script."""
     mcp.run()
+
+if __name__ == "__main__":
+    main()
