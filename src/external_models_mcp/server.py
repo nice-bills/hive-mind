@@ -58,6 +58,7 @@ def _read_context_files(file_paths: List[str]) -> str:
             with path.open("rb") as f:
                 if b"\0" in f.read(1024):
                     print(f"[Warning] Skipping binary file: {path}", file=sys.stderr)
+                    context_parts.append(f"<error file='{path}'>Skipped binary file</error>")
                     continue
 
             # Size check
