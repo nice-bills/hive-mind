@@ -133,6 +133,85 @@ def compare_experts(prompt: str, context_files: List[str] = [], experts: List[st
             
     return "\n---".join(results)
 
+def _clean_code_block(content: str) -> str:
+    """Removes markdown code fences if present."""
+    content = content.strip()
+    if content.startswith("```"):
+        # Find the first newline to skip the language identifier (e.g. ```python)
+        first_newline = content.find("\n")
+        if first_newline != -1:
+            content = content[first_newline+1:]
+        
+        # Remove the trailing ```
+        if content.endswith("```"):
+            content = content[:-3]
+    return content.strip()
+
+@mcp.tool()
+def draft_editor(file_path: str, instruction: str, model: str = "kimi-k2", context_files: List[str] = []) -> str:
+    """
+    Ask an expert model to rewrite a file based on instructions.
+    Saves the result to {file_path}.draft for review.
+    
+    Args:
+        file_path: The file to edit.
+        instruction: What changes to make.
+        model: Expert alias (default: kimi-k2).
+        context_files: Additional context files (optional).
+    """
+    resolved_model = _resolve_model_name(model)
+    target_path = Path(file_path).resolve()
+    
+    if not target_path.exists():
+        return f"Error: Target file {target_path} does not exist."
+        
+    print(f"[External Brain] Editing {target_path} with {resolved_model}...", file=sys.stderr)
+    
+    # Read the target file content
+    try:
+        current_content = target_path.read_text(encoding="utf-8")
+    except Exception as e:
+        return f"Error reading target file: {str(e)}"
+    
+    # Prepare Context (Target file + Extras)
+    # We treat the target file specially in the prompt
+    additional_context = _read_context_files(context_files)
+    
+    system_prompt = (
+        "You are an elite software engineer. You are rewriting a file to meet user requirements.\n"
+        "Output ONLY the new content of the file. Do not output markdown code fences. Do not output conversational text.\n"
+        f"Additional Context from other files:\n{additional_context}"
+    )
+    
+    user_prompt = (
+        f"--- ORIGINAL FILE: {target_path.name} ---\n"
+        f"{current_content}\n"
+        f"--- END ORIGINAL FILE ---\n\n"
+        f"INSTRUCTION: {instruction}\n\n"
+        "Rewrite the file strictly following the instruction. Maintain style and indentation."
+    )
+
+    try:
+        response = litellm.completion(
+            model=resolved_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.1 # Very low temp for precision
+        )
+        
+        # Process and Save
+        new_content = _clean_code_block(response.choices[0].message.content)
+        
+        draft_path = target_path.with_suffix(target_path.suffix + ".draft")
+        draft_path.write_text(new_content, encoding="utf-8")
+        
+        return f"Draft saved to: {draft_path}\nReview it and apply if correct."
+        
+    except Exception as e:
+        return f"Error generating draft: {str(e)}"
+
 def main():
     """Entry point for the package script."""
     mcp.run()
